@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panda Photobooth - Next-Gen Photobooth</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brandPurple: '#7c3aed',
+                        brandPink: '#db2777'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- GSAP for Smooth Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.4s ease, color 0.4s ease;
+            overflow-x: hidden;
+        }
+        .scrollable::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollable::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .scrollable::-webkit-scrollbar-thumb { background: #475569; }
+
+        @keyframes floatEffect {
+            0% { transform: translateY(0px) rotate(-1deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+            100% { transform: translateY(0px) rotate(-1deg); }
+        }
+        .floating-card {
+            animation: floatEffect 5s ease-in-out infinite;
+        }
+
+        @keyframes tulipUp {
+            0% { transform: translateY(110vh) rotate(0deg) scale(0.6); opacity: 0; }
+            15% { opacity: 0.8; }
+            85% { opacity: 0.8; }
+            100% { transform: translateY(-120vh) rotate(360deg) scale(1.3); opacity: 0; }
+        }
+
+        .tulip-bg-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .tulip-item {
+            position: absolute;
+            bottom: -50px;
+            font-size: 28px;
+            animation: tulipUp linear infinite;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .pattern-checkered {
+            background-image: repeating-linear-gradient(45deg, #ffd1dc 25%, transparent 25%, transparent 75%, #ffd1dc 75%, #ffd1dc), repeating-linear-gradient(45deg, #ffd1dc 25%, #ffffff 25%, #ffffff 75%, #ffd1dc 75%, #ffd1dc);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+        .pattern-hearts {
+            background-color: #fff0f5;
+            background-image: radial-gradient(#ff69b4 15%, transparent 16%), radial-gradient(#ff69b4 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
+        .pattern-gradient {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #a1c4fd 100%);
+        }
+    </style>
+</head>
+<body class="bg-[#faf5ff]/40 dark:bg-[#0b0f19] text-gray-900 dark:text-white min-h-screen flex flex-col justify-between selection:bg-purple-600 selection:text-white relative">
+
+    <!-- BACKGROUND ANIMATED TULIPS -->
+    <div class="tulip-bg-container">
+        <div class="tulip-item" style="left: 5%; animation-duration: 8s; animation-delay: 0s;">🌷</div>
+        <div class="tulip-item" style="left: 18%; animation-duration: 11s; animation-delay: 2s;">🌷</div>
+        <div class="tulip-item" style="left: 35%; animation-duration: 9s; animation-delay: 4s;">🌷</div>
+        <div class="tulip-item" style="left: 50%; animation-duration: 13s; animation-delay: 1s;">🌷</div>
+        <div class="tulip-item" style="left: 68%; animation-duration: 10s; animation-delay: 3s;">🌷</div>
+        <div class="tulip-item" style="left: 82%; animation-duration: 7s; animation-delay: 5s;">🌷</div>
+        <div class="tulip-item" style="left: 93%; animation-duration: 12s; animation-delay: 2.5s;">🌷</div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="w-full px-4 sm:px-6 py-4 flex justify-between items-center border-b border-gray-200/60 dark:border-gray-800 bg-white/70 dark:bg-black/70 backdrop-blur-xl sticky top-0 z-50 transition-all">
+        <div class="flex items-center gap-2 sm:gap-3 cursor-pointer group" onclick="switchView('view-landing')">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 group-hover:scale-110 transition-transform">
+                <i data-lucide="camera" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+            <span class="font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">Panda Photobooth</span>
+        </div>
+        
+        <div class="flex items-center gap-3 sm:gap-5 z-10">
+            <button onclick="switchView('view-gallery')" class="text-xs sm:text-sm font-semibold hover:text-purple-600 transition-colors cursor-pointer">Gallery</button>
+            <button onclick="switchView('view-layout')" class="text-xs sm:text-sm font-semibold hover:text-purple-600 transition-colors cursor-pointer">Studio</button>
+            
+            <button id="theme-toggle" class="p-2 sm:p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 transition-all cursor-pointer shadow-sm">
+                <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+            </button>
+
+            <button onclick="switchView('view-layout')" class="text-xs sm:text-sm font-bold px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 text-white shadow-lg shadow-purple-600/30 hover:scale-105 transition-all cursor-pointer hidden md:block">
+                Start Photobooth
+            </button>
+        </div>
+    </nav>
+
+    <!-- VIEW 1: LANDING PAGE -->
+    <main id="view-landing" class="app-view flex-1 flex flex-col md:flex-row items-center justify-center px-4 sm:px-6 py-8 sm:py-12 gap-8 sm:gap-12 max-w-6xl mx-auto my-auto w-full z-10">
+        <div class="flex-1 text-center md:text-left">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-xs font-extrabold mb-4 uppercase tracking-widest">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 animate-spin"></i> Panda Photobooth 🐼🌷
+            </div>
+            <h1 class="text-3xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight mb-4 sm:mb-5 leading-tight">
+                Capture the <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">Moment.</span>
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 text-sm sm:text-base lg:text-lg max-w-lg mb-6 sm:mb-8 font-medium mx-auto md:mx-0">
+                Professional photobooth layouts in your browser. Create high-fidelity memories instantly with custom framed videos & instant downloads!
+            </p>
+            <button onclick="switchView('view-layout')" class="px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-600/30 hover:scale-105 transition-all inline-flex items-center gap-3 cursor-pointer">
+                <span>Start Photobooth</span>
+                <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 flex justify-center w-full">
+            <div class="floating-card bg-white dark:bg-gray-900 p-4 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 w-56 sm:w-64 rotate-2">
+                <div class="flex flex-col gap-2 bg-purple-50 dark:bg-gray-800/50 p-3 rounded-2xl">
+                    <div class="w-full h-28 sm:h-32 bg-gradient-to-br from-purple-400/30 to-pink-400/30 rounded-xl flex items-center justify-center text-3xl">🐼</div>
+                    <div class="w-full h-28 sm:h-32 bg-gradient-to-br from-pink-400/30 to-purple-400/30 rounded-xl flex items-center justify-center text-3xl">🌷</div>
+                </div>
+                <p class="font-extrabold text-center text-purple-600 text-xs sm:text-sm mt-3 tracking-widest uppercase">Panda Vibes</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW 2: GALLERY PAGE -->
+    <div id="view-gallery" class="app-view flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full hidden z-10">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 text-center sm:text-left">
+            <div>
+                <span class="text-xs font-bold text-purple-600 uppercase tracking-widest">Community & Personal</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold mt-1">Photo & Video Gallery</h2>
+            </div>
+            <button onclick="switchView('view-layout')" class="px-5 py-2.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-md hover:scale-105 transition-all cursor-pointer">
+                + Create New Strip
+            </button>
+        </div>
+
+        <div id="gallery-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-10">
+            <div class="p-4 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg text-center">
+                <div class="h-60 sm:h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center text-4xl mb-3">🐼</div>
+                <h4 class="font-bold text-sm">Sample Creator Strip</h4>
+                <p class="text-xs text-gray-400">Panda Photobooth Session</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 3: STUDIO / LAYOUT SELECTOR -->
+    <div id="view-layout" class="app-view flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full hidden z-10">
+        <div class="text-center mb-6 sm:mb-8">
+            <div class="inline-block px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-xs font-bold mb-2 uppercase tracking-wider">Step 1</div>
+            <h2 class="text-2xl sm:text-4xl font-extrabold mb-2">Choose your Layout.</h2>
+            <p class="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Select a frame structure before entering the camera studio.</p>
+        </div>
+
+        <div class="flex justify-center gap-2 mb-6 flex-wrap">
+            <button onclick="filterLayouts('all', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all cursor-pointer">ALL</button>
+            <button onclick="filterLayouts('strip', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer">STRIP</button>
+            <button onclick="filterLayouts('grid', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer">GRID</button>
+            <button onclick="filterLayouts('single', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer">SINGLE</button>
+        </div>
+
+        <div id="layout-grid-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-10">
+            <div onclick="selectLayout('Classic Strip', 4)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="strip">
+                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 flex flex-col gap-1.5 p-2.5">
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                </div>
+                <h4 class="font-bold text-sm">Classic Strip</h4>
+                <p class="text-[11px] text-gray-500">4 poses</p>
+            </div>
+
+            <div onclick="selectLayout('Photo Strip', 3)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="strip">
+                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 flex flex-col gap-2 p-2.5">
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                </div>
+                <h4 class="font-bold text-sm">Photo Strip</h4>
+                <p class="text-[11px] text-gray-500">3 poses</p>
+            </div>
+
+            <div onclick="selectLayout('Grid 4-Square', 4)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="grid">
+                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 grid grid-cols-2 gap-1.5 p-2.5">
+                    <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                    <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                </div>
+                <h4 class="font-bold text-sm">Square Grid</h4>
+                <p class="text-[11px] text-gray-500">4 poses</p>
+            </div>
+
+            <div onclick="selectLayout('Solo Portrait', 1)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="single">
+                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 p-2.5 flex items-center justify-center">
+                    <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
+                </div>
+                <h4 class="font-bold text-sm">Solo Portrait</h4>
+                <p class="text-[11px] text-gray-500">1 take / solo pose</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 4: CAMERA CAPTURE -->
+    <div id="view-camera" class="app-view flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full hidden flex-col items-center justify-center text-center z-10">
+        
+        <div class="w-full max-w-2xl flex flex-col items-center justify-center mb-4">
+            <span class="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span> Studio Mode (Framed Video Recording Active)
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold mb-2">Prepare your Capture.</h2>
+            <span id="cam-shot-counter" class="px-4 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-xs font-extrabold shadow-sm">Shot 1 of 4</span>
+        </div>
+
+        <div class="w-full max-w-md mb-4 bg-white dark:bg-gray-900 p-3 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-lg mx-auto flex flex-col gap-2.5">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Piliin ang Frame para sa Video:</label>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button onclick="setStudioFrame('solid', '#ffffff', this)" class="studio-frame-btn p-1.5 rounded-lg bg-white border border-gray-300 text-[10px] font-bold text-gray-800 shadow-sm ring-2 ring-purple-600">White</button>
+                    <button onclick="setStudioFrame('solid', '#111827', this)" class="studio-frame-btn p-1.5 rounded-lg bg-gray-900 text-white text-[10px] font-bold shadow-sm">Black</button>
+                    <button onclick="setStudioFrame('solid', '#fbcfe8', this)" class="studio-frame-btn p-1.5 rounded-lg bg-pink-200 text-gray-900 text-[10px] font-bold shadow-sm">Pink</button>
+                    <button onclick="setStudioFrame('pattern', 'pattern-checkered', this)" class="studio-frame-btn p-1.5 rounded-lg pattern-checkered text-[10px] font-bold text-gray-800 border border-pink-300">Check</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Aesthetic Filter</label>
+                <div class="flex justify-center gap-1.5 flex-wrap">
+                    <button onclick="setCameraFilter('normal', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-600 text-white">Normal</button>
+                    <button onclick="setCameraFilter('vintage', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">Vintage</button>
+                    <button onclick="setCameraFilter('retro', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">Retro</button>
+                    <button onclick="setCameraFilter('glow', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">Glow</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative w-full max-w-lg sm:max-w-xl h-[320px] sm:h-[420px] bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-200 mb-5 flex items-center justify-center mx-auto p-4 transition-all" id="camera-frame-container">
+            <video id="booth-video" autoplay playsinline class="hidden"></video>
+            <canvas id="live-camera-canvas" class="w-full h-full object-cover rounded-2xl shadow-md"></canvas>
+            
+            <div id="countdown-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center text-7xl sm:text-9xl font-extrabold text-white hidden animate-pulse">
+                3
+            </div>
+        </div>
+
+        <button onclick="startCaptureSequence()" class="w-full sm:w-auto px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-600/30 hover:scale-105 transition-all inline-flex items-center justify-center gap-3 cursor-pointer mx-auto">
+            <i data-lucide="camera" class="w-5 h-5"></i>
+            <span>START CAPTURE</span>
+        </button>
+    </div>
+
+    <!-- VIEW 5: REVIEW & CUSTOMIZE SESSION -->
+    <div id="view-review" class="app-view flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full hidden flex-col items-center justify-start gap-6 sm:gap-8 z-10">
+        
+        <div class="text-center">
+            <h2 class="text-2xl sm:text-3xl font-extrabold">Review & Customize</h2>
+            <p class="text-[11px] sm:text-xs font-bold text-purple-600 dark:text-purple-400 mt-1">✨ Click 4 or more different stickers below, then download your pictures and framed video separately!</p>
+        </div>
+
+        <div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6 sm:gap-8">
+            
+            <!-- LEFT SIDEBAR -->
+            <div class="w-full lg:w-[350px] bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Frame Design & Color</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setFrameStyle('solid', '#ffffff', this)" class="p-2 rounded-xl bg-white border border-gray-300 text-xs font-bold text-gray-800 shadow-sm hover:scale-105 transition-transform">White</button>
+                        <button onclick="setFrameStyle('solid', '#111827', this)" class="p-2 rounded-xl bg-gray-900 text-white text-xs font-bold shadow-sm hover:scale-105 transition-transform">Black</button>
+                        <button onclick="setFrameStyle('solid', '#fbcfe8', this)" class="p-2 rounded-xl bg-pink-200 text-gray-900 text-xs font-bold shadow-sm hover:scale-105 transition-transform">Pink</button>
+                        <button onclick="setFrameStyle('solid', '#fef08a', this)" class="p-2 rounded-xl bg-yellow-200 text-gray-900 text-xs font-bold shadow-sm hover:scale-105 transition-transform">Yellow</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-checkered', this)" class="p-2 rounded-xl pattern-checkered text-xs font-bold text-gray-800 border border-pink-300 shadow-sm hover:scale-105 transition-transform">Check</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-hearts', this)" class="p-2 rounded-xl pattern-hearts text-xs font-bold text-pink-800 border border-pink-300 shadow-sm hover:scale-105 transition-transform">Hearts</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-gradient', this)" class="p-2 rounded-xl pattern-gradient text-xs font-bold text-white border border-blue-300 shadow-sm hover:scale-105 transition-transform col-span-2">Gradient</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Sticker Stamp (Minimum 4)</label>
+                        <button onclick="clearStickers()" class="text-xs text-pink-600 hover:underline font-bold cursor-pointer">Clear All</button>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 text-xl">
+                        <button onclick="addSticker('🐼')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🐼</button>
+                        <button onclick="addSticker('💖')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">💖</button>
+                        <button onclick="addSticker('✨')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">✨</button>
+                        <button onclick="addSticker('🌷')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🌷</button>
+                        <button onclick="addSticker('⭐')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">⭐</button>
+                        <button onclick="addSticker('🍒')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🍒</button>
+                        <button onclick="addSticker('🦋')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🦋</button>
+                        <button onclick="addSticker('🎀')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🎀</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER: PREVIEW -->
+            <div class="flex flex-col items-center justify-center w-full lg:w-auto">
+                <div id="strip-preview-box" class="p-6 sm:p-8 rounded-3xl bg-white shadow-2xl w-full max-w-[360px] sm:w-[440px] text-center relative transition-all border-4 border-purple-200">
+                    <div id="active-stickers-container" class="absolute inset-4 pointer-events-none flex flex-wrap justify-between items-center content-between text-4xl z-20 overflow-hidden"></div>
+                    
+                    <div id="review-images-wrapper" class="flex flex-col gap-4 mb-4 p-3.5 rounded-2xl bg-black/5 max-h-[480px] sm:max-h-[580px] overflow-y-auto scrollable"></div>
+                    <p id="preview-brand-text" class="font-extrabold text-base text-purple-600 uppercase tracking-widest mt-4">PANDA PHOTOBOOTH</p>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR -->
+            <div class="w-full lg:w-[350px] bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Aesthetic Filter</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="applyFilter('normal', this)" class="filter-btn-opt p-2.5 rounded-xl bg-purple-600 text-white text-xs font-extrabold cursor-pointer shadow-md">Normal</button>
+                        <button onclick="applyFilter('vintage', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200">Vintage 🎞️</button>
+                        <button onclick="applyFilter('retro', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200">Retro 📸</button>
+                        <button onclick="applyFilter('bw', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200">B&W 🖤</button>
+                        <button onclick="applyFilter('glow', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200 col-span-2">Glow ✨</button>
+                    </div>
+                </div>
+
+                <div class="mt-2 flex flex-col gap-3">
+                    <!-- Button para sa Picture -->
+                    <button onclick="exportProjectOnly()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm shadow-xl shadow-purple-600/30 hover:scale-105 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Download Picture 💾</span>
+                    </button>
+
+                    <!-- Button para sa Framed & Filtered Video -->
+                    <button onclick="downloadVideoDirectly()" class="w-full py-3.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <i data-lucide="video" class="w-4 h-4"></i>
+                        <span>Download Framed Video 🎥</span>
+                    </button>
+
+                    <button onclick="switchView('view-layout')" class="w-full py-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                        New Session 🔄
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="w-full py-4 text-center text-xs text-gray-500 border-t border-gray-200/60 dark:border-gray-800 z-10">
+        Panda Photobooth © 2026 • Creator by Justine Carl L. Ortaleza
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        function switchView(viewId) {
+            const views = document.querySelectorAll('.app-view');
+            views.forEach(v => v.classList.add('hidden'));
+
+            const targetView = document.getElementById(viewId);
+            if(targetView) {
+                targetView.classList.remove('hidden');
+                gsap.fromTo(targetView, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' });
+            }
+
+            if(viewId === 'view-camera') {
+                startCamera();
+            } else {
+                stopCamera();
+            }
+
+            if(viewId === 'view-gallery') {
+                loadGalleryItems();
+            }
+        }
+
+        function filterLayouts(category, btnElement) {
+            document.querySelectorAll('.layout-tab').forEach(tab => {
+                tab.classList.remove('bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-600/30');
+                tab.classList.add('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+            });
+            if(btnElement) {
+                btnElement.classList.remove('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+                btnElement.classList.add('bg-purple-600', 'text-white', 'shadow-md', 'shadow-purple-600/30');
+            }
+
+            const cards = document.querySelectorAll('.layout-card');
+            cards.forEach(card => {
+                if(category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        let selectedLayoutName = 'Classic Strip';
+        let totalShotsNeeded = 4;
+        let selectedTimerSeconds = 3;
+        let currentShotCount = 0;
+        let rawCapturedImages = [];
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let recordedVideoChunks = [];
+        let lastRecordedVideoBase64 = null;
+        let liveCameraFilter = 'normal';
+        let cameraAnimFrame = null;
+        
+        let studioFrameType = 'solid';
+        let studioFrameVal = '#ffffff';
+        let currentFrameType = 'solid';
+        let currentFrameValue = '#ffffff';
+        let activeStickersList = [];
+
+        function setCameraFilter(filterName, btn) {
+            liveCameraFilter = filterName;
+            document.querySelectorAll('.cam-filter-btn').forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white');
+                b.classList.add('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+            });
+            btn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+            btn.classList.add('bg-purple-600', 'text-white');
+        }
+
+        function setStudioFrame(type, val, btn) {
+            studioFrameType = type;
+            studioFrameVal = val;
+            const container = document.getElementById('camera-frame-container');
+            container.className = "relative w-full max-w-lg sm:max-w-xl h-[320px] sm:h-[420px] rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-200 mb-5 flex items-center justify-center mx-auto p-4 transition-all ";
+            
+            if(type === 'solid') {
+                container.style.backgroundColor = val;
+            } else {
+                container.style.backgroundColor = '';
+                container.classList.add(val);
+            }
+
+            document.querySelectorAll('.studio-frame-btn').forEach(b => {
+                b.classList.remove('ring-2', 'ring-purple-600');
+            });
+            if(btn) btn.classList.add('ring-2', 'ring-purple-600');
+        }
+
+        function selectLayout(name, shots) {
+            selectedLayoutName = name;
+            totalShotsNeeded = shots;
+            document.getElementById('cam-shot-counter').innerText = `Shot 1 of ${totalShotsNeeded}`;
+            switchView('view-camera');
+        }
+
+        async function startCamera() {
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+                const video = document.getElementById('booth-video');
+                video.srcObject = mediaStream;
+                await video.play();
+
+                currentShotCount = 0;
+                rawCapturedImages = [];
+                recordedVideoChunks = [];
+                lastRecordedVideoBase64 = null;
+
+                const recordCanvas = document.createElement('canvas');
+                recordCanvas.width = 640; recordCanvas.height = 760; // Mas mataas para magkasya ang frame at watermark
+                const recCtx = recordCanvas.getContext('2d');
+
+                const liveCanvas = document.getElementById('live-camera-canvas');
+                const liveCtx = liveCanvas.getContext('2d');
+
+                function renderLiveFrame() {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        liveCanvas.width = 600; liveCanvas.height = 450;
+                        
+                        // 1. I-draw ang napiling frame background sa buong recording canvas
+                        if(studioFrameType === 'solid') {
+                            recCtx.fillStyle = studioFrameVal;
+                            recCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+                        } else {
+                            recCtx.fillStyle = '#ffd1dc';
+                            recCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+                        }
+
+                        // 2. I-draw ang camera video sa gitna na may tamang mirror effect
+                        recCtx.save();
+                        recCtx.translate(recordCanvas.width, 0);
+                        recCtx.scale(-1, 1);
+                        recCtx.drawImage(video, 40, 40, 560, 420);
+                        recCtx.restore();
+
+                        // 3. I-apply ang aesthetic filter sa recorded stream
+                        applyFilterEffect(recCtx, recordCanvas.width, recordCanvas.height, liveCameraFilter);
+
+                        // 4. I-draw ang brand watermark sa baba ng framed video
+                        recCtx.fillStyle = studioFrameVal === '#111827' ? '#c084fc' : '#7c3aed';
+                        recCtx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+                        recCtx.textAlign = 'center';
+                        recCtx.fillText('PANDA PHOTOBOOTH 🐼🌷', recordCanvas.width / 2, 715);
+
+                        // 5. I-display sa live preview canvas
+                        liveCtx.drawImage(recordCanvas, 0, 0, liveCanvas.width, liveCanvas.height);
+                    }
+                    cameraAnimFrame = requestAnimationFrame(renderLiveFrame);
+                }
+                renderLiveFrame();
+
+                const canvasStream = recordCanvas.captureStream(30);
+                try {
+                    mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
+                } catch(e) {
+                    mediaRecorder = new MediaRecorder(canvasStream);
+                }
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) {
+                        recordedVideoChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedVideoChunks, { type: 'video/webm' });
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        lastRecordedVideoBase64 = reader.result;
+                    };
+                    reader.readAsDataURL(blob);
+                };
+
+            } catch(e) {
+                alert("Camera access failed. Please check permissions.");
+                switchView('view-layout');
+            }
+        }
+
+        function stopCamera() {
+            if(cameraAnimFrame) cancelAnimationFrame(cameraAnimFrame);
+            if(mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            if(mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+        }
+
+        function startCaptureSequence() {
+            if(currentShotCount >= totalShotsNeeded) return;
+            document.getElementById('cam-shot-counter').innerText = `Shot ${currentShotCount + 1} of ${totalShotsNeeded}`;
+
+            if(currentShotCount === 0 && mediaRecorder && mediaRecorder.state === 'inactive') {
+                mediaRecorder.start();
+                document.getElementById('rec-dot').classList.remove('bg-gray-400');
+                document.getElementById('rec-dot').classList.add('bg-red-500', 'animate-ping');
+            }
+
+            let count = selectedTimerSeconds;
+            const overlay = document.getElementById('countdown-overlay');
+            overlay.classList.remove('hidden');
+            overlay.innerText = count;
+
+            let timer = setInterval(() => {
+                count--;
+                if(count > 0) {
+                    overlay.innerText = count;
+                } else {
+                    clearInterval(timer);
+                    overlay.classList.add('hidden');
+                    takeSnapshot();
+
+                    if(currentShotCount < totalShotsNeeded) {
+                        setTimeout(startCaptureSequence, 1000);
+                    } else {
+                        if(mediaRecorder && mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                        stopCamera();
+                        activeStickersList = [];
+                        buildReviewStrip();
+                        switchView('view-review');
+                        confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+                    }
+                }
+            }, 1000);
+        }
+
+        function takeSnapshot() {
+            const video = document.getElementById('booth-video');
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 640; tempCanvas.height = 480;
+            const tCtx = tempCanvas.getContext('2d');
+
+            if(studioFrameType === 'solid') {
+                tCtx.fillStyle = studioFrameVal;
+                tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            } else {
+                tCtx.fillStyle = '#ffd1dc';
+                tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            }
+
+            tCtx.save();
+            tCtx.translate(tempCanvas.width, 0);
+            tCtx.scale(-1, 1);
+            tCtx.drawImage(video, 20, 20, 600, 400);
+            tCtx.restore();
+
+            applyFilterEffect(tCtx, tempCanvas.width, tempCanvas.height, liveCameraFilter);
+
+            rawCapturedImages.push(tempCanvas.toDataURL('image/png'));
+            currentShotCount++;
+        }
+
+        function applyFilterEffect(ctx, width, height, type) {
+            if (type === 'normal') return;
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const d = imgData.data;
+
+            for (let i = 0; i < d.length; i += 4) {
+                let r = d[i], g = d[i+1], b = d[i+2];
+
+                if (type === 'bw') {
+                    let v = 0.3 * r + 0.59 * g + 0.11 * b;
+                    d[i] = v; d[i+1] = v; d[i+2] = v;
+                } else if (type === 'vintage') {
+                    d[i]   = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189) + 20);
+                    d[i+1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168) + 10);
+                    d[i+2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+                } else if (type === 'retro') {
+                    d[i]   = Math.min(255, r * 1.2 + 30);
+                    d[i+1] = Math.min(255, g * 1.1 + 10);
+                    d[i+2] = Math.min(255, b * 0.8);
+                } else if (type === 'glow') {
+                    d[i]   = Math.min(255, r * 1.15 + 15);
+                    d[i+1] = Math.min(255, g * 1.15 + 15);
+                    d[i+2] = Math.min(255, b * 1.15 + 15);
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function applyFilter(filterType, btnElem) {
+            activeFilterType = filterType;
+
+            document.querySelectorAll('.filter-btn-opt').forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white', 'shadow-md');
+                b.classList.add('bg-gray-100', 'dark:bg-gray-800');
+            });
+            if(btnElem) {
+                btnElem.classList.remove('bg-gray-100', 'dark:bg-gray-800');
+                btnElem.classList.add('bg-purple-600', 'text-white', 'shadow-md');
+            }
+
+            buildReviewStrip();
+        }
+
+        function setFrameStyle(type, val, btn) {
+            currentFrameType = type;
+            currentFrameValue = val;
+            const box = document.getElementById('strip-preview-box');
+            
+            box.style.backgroundColor = '';
+            box.className = "p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-[360px] sm:w-[440px] text-center relative transition-all border-4 border-purple-200";
+
+            if(type === 'solid') {
+                box.style.backgroundColor = val;
+                if(val === '#111827' || val === '#000000') {
+                    box.style.color = '#ffffff';
+                    document.getElementById('preview-brand-text').style.color = '#c084fc';
+                } else {
+                    box.style.color = '#111827';
+                    document.getElementById('preview-brand-text').style.color = '#7c3aed';
+                }
+            } else if(type === 'pattern') {
+                box.classList.add(val);
+                document.getElementById('preview-brand-text').style.color = '#7c3aed';
+            }
+        }
+
+        function addSticker(emoji) {
+            activeStickersList.push(emoji);
+            renderStickersPreview();
+        }
+
+        function clearStickers() {
+            activeStickersList = [];
+            renderStickersPreview();
+        }
+
+        function renderStickersPreview() {
+            const container = document.getElementById('active-stickers-container');
+            container.innerHTML = '';
+            activeStickersList.forEach((st, idx) => {
+                const span = document.createElement('span');
+                span.innerText = st;
+                span.className = "absolute cursor-pointer hover:scale-125 transition-transform select-none";
+                
+                const randomTop = Math.random() * 85;
+                const randomLeft = (idx % 2 === 0) ? (Math.random() * 15) : (80 + Math.random() * 15);
+                span.style.top = `${randomTop}%`;
+                span.style.left = `${randomLeft}%`;
+
+                span.addEventListener('click', () => {
+                    activeStickersList.splice(idx, 1);
+                    renderStickersPreview();
+                });
+                container.appendChild(span);
+            });
+        }
+
+        function deletePhotoPose(index) {
+            rawCapturedImages.splice(index, 1);
+            if(rawCapturedImages.length === 0) {
+                alert("All photos deleted. Returning to Studio.");
+                switchView('view-layout');
+                return;
+            }
+            buildReviewStrip();
+        }
+
+        function deleteGalleryItem(index) {
+            let galleryItems = JSON.parse(localStorage.getItem('studiocurator_gallery') || '[]');
+            galleryItems.splice(index, 1);
+            localStorage.setItem('studiocurator_gallery', JSON.stringify(galleryItems));
+            loadGalleryItems();
+        }
+
+        let activeFilterType = 'normal';
+
+        function buildReviewStrip() {
+            const wrapper = document.getElementById('review-images-wrapper');
+            wrapper.innerHTML = '';
+            
+            rawCapturedImages.forEach((src, idx) => {
+                const containerDiv = document.createElement('div');
+                containerDiv.className = "relative group";
+
+                const filteredImg = document.createElement('img');
+                filteredImg.className = "w-full h-36 sm:h-44 object-cover rounded-2xl shadow-sm border border-black/10";
+                
+                const img = new Image();
+                img.onload = () => {
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    tempCtx.drawImage(img, 0, 0);
+                    applyFilterEffect(tempCtx, tempCanvas.width, tempCanvas.height, activeFilterType);
+                    filteredImg.src = tempCanvas.toDataURL('image/png');
+                };
+                img.src = src;
+
+                const delBtn = document.createElement('button');
+                delBtn.innerHTML = '🗑';
+                delBtn.className = "absolute top-3 right-3 bg-red-600/90 hover:bg-red-600 text-white text-sm px-3 py-2 rounded-xl opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md";
+                delBtn.title = "Delete this photo";
+                delBtn.onclick = () => deletePhotoPose(idx);
+
+                containerDiv.appendChild(filteredImg);
+                containerDiv.appendChild(delBtn);
+                wrapper.appendChild(containerDiv);
+            });
+
+            renderStickersPreview();
+        }
+
+        function exportProjectOnly() {
+            if (activeStickersList.length < 4) {
+                alert("⚠️ Mangyaring maglagay ng kahit minimum na 4 na stickers bago i-download ang iyong photobooth strip!");
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 600; canvas.height = 1050;
+            const ctx = canvas.getContext('2d');
+            
+            if(currentFrameType === 'solid') {
+                ctx.fillStyle = currentFrameValue;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            let loaded = 0;
+            rawCapturedImages.forEach((src, idx) => {
+                const img = new Image();
+                img.onload = () => {
+                    let y = 45 + (idx * 230);
+                    
+                    const pCanvas = document.createElement('canvas');
+                    const pCtx = pCanvas.getContext('2d');
+                    pCanvas.width = img.width;
+                    pCanvas.height = img.height;
+                    pCtx.drawImage(img, 0, 0);
+                    applyFilterEffect(pCtx, pCanvas.width, pCanvas.height, activeFilterType);
+
+                    ctx.drawImage(pCanvas, 50, y, 500, 210);
+                    loaded++;
+
+                    if(loaded === rawCapturedImages.length) {
+                        ctx.font = '36px sans-serif';
+                        activeStickersList.forEach((st, sIdx) => {
+                            let sx = (sIdx % 2 === 0) ? 40 + (sIdx * 15) : 500 - (sIdx * 10);
+                            let sy = 60 + (sIdx * 120) % 950;
+                            ctx.fillText(st, sx, sy);
+                        });
+
+                        ctx.fillStyle = '#7c3aed';
+                        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PANDA PHOTOBOOTH', canvas.width / 2, 1010);
+
+                        const dataUrl = canvas.toDataURL('image/png');
+                        
+                        let galleryItems = JSON.parse(localStorage.getItem('studiocurator_gallery') || '[]');
+                        galleryItems.unshift({
+                            image: dataUrl,
+                            video: lastRecordedVideoBase64 || null,
+                            date: new Date().toLocaleDateString()
+                        });
+                        localStorage.setItem('studiocurator_gallery', JSON.stringify(galleryItems));
+
+                        const link = document.createElement('a');
+                        link.download = `panda-photobooth-strip.png`;
+                        link.href = dataUrl;
+                        link.click();
+
+                        switchView('view-gallery');
+                    }
+                };
+                img.src = src;
+            });
+        }
+
+        function downloadVideoDirectly() {
+            if(!lastRecordedVideoBase64) {
+                alert("⚠️ Hintaying matapos ang recording ng video.");
+                return;
+            }
+            const link = document.createElement('a');
+            link.download = `panda-framed-video.webm`;
+            link.href = lastRecordedVideoBase64;
+            link.click();
+        }
+
+        function loadGalleryItems() {
+            const container = document.getElementById('gallery-container');
+            let galleryItems = JSON.parse(localStorage.getItem('studiocurator_gallery') || '[]');
+            
+            if(galleryItems.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg text-center col-span-full py-12">
+                        <p class="text-gray-400 text-sm mb-3">No photo strips or video recordings in your gallery yet.</p>
+                        <button onclick="switchView('view-layout')" class="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-xs font-bold">Create Strip Now 🐼</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            galleryItems.forEach((item, idx) => {
+                const imgSrc = typeof item === 'string' ? item : item.image;
+                const vidSrc = typeof item === 'object' ? item.video : null;
+                const itemDate = typeof item === 'object' ? item.date : 'Recent';
+
+                const div = document.createElement('div');
+                div.className = "p-4 rounded-3xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg text-center relative group flex flex-col justify-between";
+
+                div.innerHTML = `
+                    <div>
+                        <button onclick="deleteGalleryItem(${idx})" class="absolute top-6 right-6 bg-red-600/90 hover:bg-red-600 text-white text-xs px-2.5 py-2 rounded-xl opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md z-10" title="Delete Item">🗑 Delete</button>
+                        <img src="${imgSrc}" class="w-full h-60 object-contain rounded-2xl bg-gray-50 dark:bg-gray-800 mb-3 shadow-inner">
+                        <h4 class="font-bold text-sm">Photo Strip #${galleryItems.length - idx} (${itemDate})</h4>
+                        ${vidSrc ? `<video src="${vidSrc}" controls class="w-full h-24 object-cover rounded-xl mt-2 shadow-sm"></video>` : ''}
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-col items-center gap-2">
+                        <div class="flex gap-2 w-full mt-2">
+                            <a href="${imgSrc}" download="panda-strip-${idx}.png" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold text-center shadow-md hover:opacity-90">Picture 💾</a>
+                            ${vidSrc ? `<a href="${vidSrc}" download="panda-framed-video-${idx}.webm" class="flex-1 py-2 bg-pink-600 text-white rounded-xl text-xs font-bold text-center shadow-md hover:opacity-90">Video 🎥</a>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
