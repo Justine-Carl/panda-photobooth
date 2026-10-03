@@ -2,8 +2,8 @@
 <html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panda Photobooth - Next-Gen Photobooth</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Panda Photobooth - Next-Gen Responsive Photobooth</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,15 +27,20 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- MediaPipe Face Mesh for Ultra-Precise Multi-Face Tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
     <style>
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
             transition: background-color 0.4s ease, color 0.4s ease;
             overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
-        .scrollable::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollable::-webkit-scrollbar { width: 5px; height: 5px; }
         .scrollable::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .dark .scrollable::-webkit-scrollbar-thumb { background: #475569; }
 
@@ -78,18 +83,48 @@
         }
         .pattern-hearts {
             background-color: #fff0f5;
-            background-image: radial-gradient(#ff69b4 15%, transparent 16%), radial-gradient(#ff69b4 15%, transparent 16%);
-            background-size: 30px 30px;
-            background-position: 0 0, 15px 15px;
+            background-image: radial-gradient(#ff69b4 20%, transparent 21%), radial-gradient(#ff69b4 20%, transparent 21%);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+        }
+        .pattern-stars {
+            background-color: #0b0f19;
+            background-image: radial-gradient(#f59e0b 20%, transparent 21%), radial-gradient(#fef08a 20%, transparent 21%);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
         }
         .pattern-gradient {
             background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #a1c4fd 100%);
+        }
+
+        .flash-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        .trigger-flash {
+            animation: cameraFlash 0.35s ease-out;
+        }
+        @keyframes cameraFlash {
+            0% { opacity: 0.95; }
+            100% { opacity: 0; }
+        }
+
+        /* Mobile specific fixes */
+        @media (max-width: 640px) {
+            .mobile-cam-box {
+                height: 52vh !important;
+                max-height: 420px !important;
+                min-height: 320px !important;
+            }
         }
     </style>
 </head>
 <body class="bg-[#faf5ff]/40 dark:bg-[#0b0f19] text-gray-900 dark:text-white min-h-screen flex flex-col justify-between selection:bg-purple-600 selection:text-white relative">
 
-    <!-- BACKGROUND ANIMATED TULIPS -->
     <div class="tulip-bg-container">
         <div class="tulip-item" style="left: 5%; animation-duration: 8s; animation-delay: 0s;">🌷</div>
         <div class="tulip-item" style="left: 18%; animation-duration: 11s; animation-delay: 2s;">🌷</div>
@@ -100,20 +135,19 @@
         <div class="tulip-item" style="left: 93%; animation-duration: 12s; animation-delay: 2.5s;">🌷</div>
     </div>
 
-    <!-- NAVBAR -->
-    <nav class="w-full px-4 sm:px-6 py-4 flex justify-between items-center border-b border-gray-200/60 dark:border-gray-800 bg-white/70 dark:bg-black/70 backdrop-blur-xl sticky top-0 z-50 transition-all">
+    <nav class="w-full px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center border-b border-gray-200/60 dark:border-gray-800 bg-white/70 dark:bg-black/70 backdrop-blur-xl sticky top-0 z-50 transition-all">
         <div class="flex items-center gap-2 sm:gap-3 cursor-pointer group" onclick="switchView('view-landing')">
             <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 group-hover:scale-110 transition-transform">
-                <i data-lucide="camera" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                <i data-lucide="camera" class="w-5 h-5"></i>
             </div>
-            <span class="font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">Panda Photobooth</span>
+            <span class="font-extrabold text-base sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">Panda Photobooth</span>
         </div>
         
-        <div class="flex items-center gap-3 sm:gap-5 z-10">
-            <button onclick="switchView('view-gallery')" class="text-xs sm:text-sm font-semibold hover:text-purple-600 transition-colors cursor-pointer">Gallery</button>
-            <button onclick="switchView('view-layout')" class="text-xs sm:text-sm font-semibold hover:text-purple-600 transition-colors cursor-pointer">Studio</button>
+        <div class="flex items-center gap-2 sm:gap-5 z-10">
+            <button onclick="switchView('view-gallery')" class="text-xs sm:text-sm font-semibold hover:text-purple-600 transition-colors cursor-pointer min-h-[40px] px-2">Gallery</button>
+            <button onclick="switchView('view-layout')" class="text-xs sm:text-sm font-semibold hover:text-purple-600 transition-colors cursor-pointer min-h-[40px] px-2">Studio</button>
             
-            <button id="theme-toggle" class="p-2 sm:p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 transition-all cursor-pointer shadow-sm">
+            <button id="theme-toggle" class="p-2 sm:p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 transition-all cursor-pointer shadow-sm active:scale-95">
                 <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
                 <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
             </button>
@@ -124,43 +158,41 @@
         </div>
     </nav>
 
-    <!-- VIEW 1: LANDING PAGE -->
-    <main id="view-landing" class="app-view flex-1 flex flex-col md:flex-row items-center justify-center px-4 sm:px-6 py-8 sm:py-12 gap-8 sm:gap-12 max-w-6xl mx-auto my-auto w-full z-10">
+    <main id="view-landing" class="app-view flex-1 flex flex-col md:flex-row items-center justify-center px-4 sm:px-6 py-6 sm:py-12 gap-6 sm:gap-12 max-w-6xl mx-auto my-auto w-full z-10">
         <div class="flex-1 text-center md:text-left">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-xs font-extrabold mb-4 uppercase tracking-widest">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 animate-spin"></i> Panda Photobooth 🐼🌷
             </div>
-            <h1 class="text-3xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight mb-4 sm:mb-5 leading-tight">
+            <h1 class="text-3xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight mb-3 sm:mb-5 leading-tight">
                 Capture the <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">Moment.</span>
             </h1>
             <p class="text-gray-600 dark:text-gray-400 text-sm sm:text-base lg:text-lg max-w-lg mb-6 sm:mb-8 font-medium mx-auto md:mx-0">
-                Professional photobooth layouts in your browser. Create high-fidelity memories instantly with custom framed videos & instant downloads!
+                Mobile-optimized browser photobooth. Precise eye-centered AR props & framed videos on all screens!
             </p>
-            <button onclick="switchView('view-layout')" class="px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-600/30 hover:scale-105 transition-all inline-flex items-center gap-3 cursor-pointer">
+            <button onclick="switchView('view-layout')" class="px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all inline-flex items-center gap-3 cursor-pointer">
                 <span>Start Photobooth</span>
                 <i data-lucide="arrow-right" class="w-5 h-5"></i>
             </button>
         </div>
 
         <div class="flex-1 flex justify-center w-full">
-            <div class="floating-card bg-white dark:bg-gray-900 p-4 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 w-56 sm:w-64 rotate-2">
+            <div class="floating-card bg-white dark:bg-gray-900 p-4 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 w-52 sm:w-64 rotate-2">
                 <div class="flex flex-col gap-2 bg-purple-50 dark:bg-gray-800/50 p-3 rounded-2xl">
-                    <div class="w-full h-28 sm:h-32 bg-gradient-to-br from-purple-400/30 to-pink-400/30 rounded-xl flex items-center justify-center text-3xl">🐼</div>
-                    <div class="w-full h-28 sm:h-32 bg-gradient-to-br from-pink-400/30 to-purple-400/30 rounded-xl flex items-center justify-center text-3xl">🌷</div>
+                    <div class="w-full h-24 sm:h-32 bg-gradient-to-br from-purple-400/30 to-pink-400/30 rounded-xl flex items-center justify-center text-3xl">🐼</div>
+                    <div class="w-full h-24 sm:h-32 bg-gradient-to-br from-pink-400/30 to-purple-400/30 rounded-xl flex items-center justify-center text-3xl">🌷</div>
                 </div>
                 <p class="font-extrabold text-center text-purple-600 text-xs sm:text-sm mt-3 tracking-widest uppercase">Panda Vibes</p>
             </div>
         </div>
     </main>
 
-    <!-- VIEW 2: GALLERY PAGE -->
     <div id="view-gallery" class="app-view flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full hidden z-10">
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 text-center sm:text-left">
             <div>
                 <span class="text-xs font-bold text-purple-600 uppercase tracking-widest">Community & Personal</span>
                 <h2 class="text-2xl sm:text-3xl font-extrabold mt-1">Photo & Video Gallery</h2>
             </div>
-            <button onclick="switchView('view-layout')" class="px-5 py-2.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-md hover:scale-105 transition-all cursor-pointer">
+            <button onclick="switchView('view-layout')" class="px-5 py-2.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer">
                 + Create New Strip
             </button>
         </div>
@@ -174,7 +206,6 @@
         </div>
     </div>
 
-    <!-- VIEW 3: STUDIO / LAYOUT SELECTOR -->
     <div id="view-layout" class="app-view flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full hidden z-10">
         <div class="text-center mb-6 sm:mb-8">
             <div class="inline-block px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-xs font-bold mb-2 uppercase tracking-wider">Step 1</div>
@@ -183,182 +214,242 @@
         </div>
 
         <div class="flex justify-center gap-2 mb-6 flex-wrap">
-            <button onclick="filterLayouts('all', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all cursor-pointer">ALL</button>
-            <button onclick="filterLayouts('strip', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer">STRIP</button>
-            <button onclick="filterLayouts('grid', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer">GRID</button>
-            <button onclick="filterLayouts('single', this)" class="layout-tab px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer">SINGLE</button>
+            <button onclick="filterLayouts('all', this)" class="layout-tab px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold bg-purple-600 text-white shadow-md shadow-purple-600/30 transition-all cursor-pointer min-h-[44px]">ALL</button>
+            <button onclick="filterLayouts('strip', this)" class="layout-tab px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer min-h-[44px]">STRIP</button>
+            <button onclick="filterLayouts('grid', this)" class="layout-tab px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer min-h-[44px]">GRID</button>
+            <button onclick="filterLayouts('single', this)" class="layout-tab px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all cursor-pointer min-h-[44px]">SINGLE</button>
         </div>
 
-        <div id="layout-grid-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-10">
-            <div onclick="selectLayout('Classic Strip', 4)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="strip">
-                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 flex flex-col gap-1.5 p-2.5">
+        <div id="layout-grid-container" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-10">
+            <div onclick="selectLayout('Classic Strip', 4)" class="layout-card p-3 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-purple-500 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all text-center group" data-category="strip">
+                <div class="h-32 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 flex flex-col gap-1.5 p-2 sm:p-2.5">
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                 </div>
-                <h4 class="font-bold text-sm">Classic Strip</h4>
-                <p class="text-[11px] text-gray-500">4 poses</p>
+                <h4 class="font-bold text-xs sm:text-sm">Classic Strip</h4>
+                <p class="text-[10px] sm:text-[11px] text-gray-500">4 poses</p>
             </div>
 
-            <div onclick="selectLayout('Photo Strip', 3)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="strip">
-                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 flex flex-col gap-2 p-2.5">
+            <div onclick="selectLayout('Photo Strip', 3)" class="layout-card p-3 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all text-center group" data-category="strip">
+                <div class="h-32 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 flex flex-col gap-2 p-2 sm:p-2.5">
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                 </div>
-                <h4 class="font-bold text-sm">Photo Strip</h4>
-                <p class="text-[11px] text-gray-500">3 poses</p>
+                <h4 class="font-bold text-xs sm:text-sm">Photo Strip</h4>
+                <p class="text-[10px] sm:text-[11px] text-gray-500">3 poses</p>
             </div>
 
-            <div onclick="selectLayout('Grid 4-Square', 4)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="grid">
-                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 grid grid-cols-2 gap-1.5 p-2.5">
+            <div onclick="selectLayout('Grid 4-Square', 4)" class="layout-card p-3 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all text-center group" data-category="grid">
+                <div class="h-32 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 grid grid-cols-2 gap-1.5 p-2 sm:p-2.5">
                     <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                     <div class="bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                 </div>
-                <h4 class="font-bold text-sm">Square Grid</h4>
-                <p class="text-[11px] text-gray-500">4 poses</p>
+                <h4 class="font-bold text-xs sm:text-sm">Square Grid</h4>
+                <p class="text-[10px] sm:text-[11px] text-gray-500">4 poses</p>
             </div>
 
-            <div onclick="selectLayout('Solo Portrait', 1)" class="layout-card p-4 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 transition-all text-center group" data-category="single">
-                <div class="h-36 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 p-2.5 flex items-center justify-center">
+            <div onclick="selectLayout('Solo Portrait', 1)" class="layout-card p-3 sm:p-5 rounded-3xl bg-white dark:bg-gray-900 border-2 border-transparent hover:border-purple-500 shadow-xl cursor-pointer hover:scale-105 active:scale-95 transition-all text-center group" data-category="single">
+                <div class="h-32 sm:h-40 bg-purple-50 dark:bg-gray-800/60 rounded-2xl mb-3 p-2 sm:p-2.5 flex items-center justify-center">
                     <div class="w-full h-full bg-purple-200 dark:bg-purple-900/50 rounded-lg"></div>
                 </div>
-                <h4 class="font-bold text-sm">Solo Portrait</h4>
-                <p class="text-[11px] text-gray-500">1 take / solo pose</p>
+                <h4 class="font-bold text-xs sm:text-sm">Solo Portrait</h4>
+                <p class="text-[10px] sm:text-[11px] text-gray-500">1 pose</p>
             </div>
         </div>
     </div>
 
-    <!-- VIEW 4: CAMERA CAPTURE -->
-    <div id="view-camera" class="app-view flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 w-full hidden flex-col items-center justify-center text-center z-10">
+    <div id="view-camera" class="app-view flex-1 max-w-7xl mx-auto px-2 sm:px-6 py-2 sm:py-6 w-full hidden flex-col items-center justify-center text-center z-10">
         
-        <div class="w-full max-w-2xl flex flex-col items-center justify-center mb-4">
-            <span class="text-xs font-bold text-purple-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <span id="rec-dot" class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span> Studio Mode (Framed Video Recording Active)
+        <div class="w-full max-w-3xl flex flex-col items-center justify-center mb-1.5 sm:mb-4">
+            <span class="text-[10px] sm:text-xs font-bold text-purple-600 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                <span id="rec-dot" class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-gray-400 inline-block"></span> Studio Mode (Eye Centered ✨)
             </span>
-            <h2 class="text-2xl sm:text-3xl font-extrabold mb-2">Prepare your Capture.</h2>
-            <span id="cam-shot-counter" class="px-4 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-xs font-extrabold shadow-sm">Shot 1 of 4</span>
+            <h2 class="text-lg sm:text-3xl font-extrabold mb-0.5">Prepare your Capture.</h2>
+            <span id="cam-shot-counter" class="px-3 py-0.5 sm:px-4 sm:py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-[10px] sm:text-xs font-extrabold shadow-sm">Shot 1 of 4</span>
         </div>
 
-        <div class="w-full max-w-md mb-4 bg-white dark:bg-gray-900 p-3 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-lg mx-auto flex flex-col gap-2.5">
-            <div>
-                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Piliin ang Frame para sa Video:</label>
-                <div class="grid grid-cols-4 gap-1.5">
-                    <button onclick="setStudioFrame('solid', '#ffffff', this)" class="studio-frame-btn p-1.5 rounded-lg bg-white border border-gray-300 text-[10px] font-bold text-gray-800 shadow-sm ring-2 ring-purple-600">White</button>
-                    <button onclick="setStudioFrame('solid', '#111827', this)" class="studio-frame-btn p-1.5 rounded-lg bg-gray-900 text-white text-[10px] font-bold shadow-sm">Black</button>
-                    <button onclick="setStudioFrame('solid', '#fbcfe8', this)" class="studio-frame-btn p-1.5 rounded-lg bg-pink-200 text-gray-900 text-[10px] font-bold shadow-sm">Pink</button>
-                    <button onclick="setStudioFrame('pattern', 'pattern-checkered', this)" class="studio-frame-btn p-1.5 rounded-lg pattern-checkered text-[10px] font-bold text-gray-800 border border-pink-300">Check</button>
-                </div>
-            </div>
-            <div>
-                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Aesthetic Filter</label>
-                <div class="flex justify-center gap-1.5 flex-wrap">
-                    <button onclick="setCameraFilter('normal', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-600 text-white">Normal</button>
-                    <button onclick="setCameraFilter('vintage', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">Vintage</button>
-                    <button onclick="setCameraFilter('retro', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">Retro</button>
-                    <button onclick="setCameraFilter('glow', this)" class="cam-filter-btn px-2.5 py-1 rounded-lg text-[11px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">Glow</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="relative w-full max-w-lg sm:max-w-xl h-[320px] sm:h-[420px] bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-200 mb-5 flex items-center justify-center mx-auto p-4 transition-all" id="camera-frame-container">
-            <video id="booth-video" autoplay playsinline class="hidden"></video>
-            <canvas id="live-camera-canvas" class="w-full h-full object-cover rounded-2xl shadow-md"></canvas>
+        <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5 items-stretch justify-center mb-4">
             
-            <div id="countdown-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center text-7xl sm:text-9xl font-extrabold text-white hidden animate-pulse">
-                3
+            <!-- CAMERA CENTER -->
+            <div class="lg:col-span-6 order-1 lg:order-2 flex flex-col items-center justify-center w-full">
+                <div class="mobile-cam-box relative w-full h-[48vh] sm:h-[480px] lg:h-[520px] rounded-3xl overflow-hidden shadow-2xl border-2 sm:border-4 border-purple-300 mb-3 flex items-center justify-center mx-auto transition-all p-1.5 sm:p-4 bg-white" id="camera-frame-container">
+                    <div id="flash-effect" class="flash-overlay"></div>
+                    <video id="booth-video" autoplay playsinline muted class="hidden"></video>
+                    <canvas id="live-camera-canvas" class="w-full h-full object-cover rounded-2xl shadow-md border border-black/10"></canvas>
+                    
+                    <div id="countdown-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center text-7xl sm:text-9xl font-extrabold text-white hidden animate-pulse">
+                        3
+                    </div>
+                </div>
+
+                <button onclick="startCaptureSequence()" class="w-full sm:w-auto min-h-[50px] px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all inline-flex items-center justify-center gap-2 sm:gap-3 cursor-pointer">
+                    <i data-lucide="camera" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    <span>START CAPTURE</span>
+                </button>
             </div>
+
+            <!-- LEFT CONTROL PANEL: PROPS -->
+            <div class="lg:col-span-3 order-2 lg:order-1 bg-white dark:bg-gray-900 p-3 sm:p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col justify-between gap-2 text-left">
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="block text-[10px] sm:text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">👥 Multi-Person Props</label>
+                        <button onclick="clearAllFaceProps()" class="text-[10px] text-pink-600 font-bold hover:underline cursor-pointer min-h-[30px] flex items-center">Clear</button>
+                    </div>
+
+                    <div id="face-target-tabs" class="flex gap-1.5 mb-2.5 overflow-x-auto scrollable pb-1">
+                        <button onclick="setTargetFace('all', this)" class="target-face-btn px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-sm cursor-pointer whitespace-nowrap min-h-[36px]">✨ All</button>
+                        <button onclick="setTargetFace(0, this)" class="target-face-btn px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold shadow-sm cursor-pointer whitespace-nowrap min-h-[36px]">👤 Person 1</button>
+                    </div>
+
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Prop Style (Eye-Centered 👁️)</label>
+                    <div class="grid grid-cols-3 sm:grid-cols-3 gap-2 text-center text-xl sm:text-2xl">
+                        <button onclick="applyPropToTarget('heart_glasses')" class="prop-choice-btn p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer shadow-sm flex items-center justify-center min-h-[46px]" title="Pink Heart Glasses">💖</button>
+                        <button onclick="applyPropToTarget('round_retro')" class="prop-choice-btn p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer shadow-sm flex items-center justify-center min-h-[46px]" title="Black Round Glasses">🤓</button>
+                        <button onclick="applyPropToTarget('masquerade_mask')" class="prop-choice-btn p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer shadow-sm flex items-center justify-center min-h-[46px]" title="Blue Glitter Masquerade Mask">🎭</button>
+                        <button onclick="applyPropToTarget('cateye_red')" class="prop-choice-btn p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer shadow-sm flex items-center justify-center min-h-[46px]" title="Red Glitter Cat-Eye Glasses">🕶️</button>
+                        <button onclick="applyPropToTarget('star_glasses')" class="prop-choice-btn p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer shadow-sm flex items-center justify-center min-h-[46px]" title="Star Party Glasses">⭐</button>
+                        <button onclick="applyPropToTarget('pixel_thug')" class="prop-choice-btn p-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:scale-110 active:scale-95 transition-transform cursor-pointer shadow-sm flex items-center justify-center min-h-[46px]" title="Pixel Shades">😎</button>
+                    </div>
+                </div>
+
+                <div class="p-2 bg-purple-50 dark:bg-purple-950/30 rounded-2xl text-[10px] text-purple-700 dark:text-purple-300 font-medium">
+                    💡 <b>Mobile Tip:</b> Perfect centering regardless of phone orientation!
+                </div>
+            </div>
+
+            <!-- RIGHT CONTROL PANEL: FRAMES & EXPANDED FILTERS -->
+            <div class="lg:col-span-3 order-3 lg:order-3 bg-white dark:bg-gray-900 p-3 sm:p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col justify-start gap-2.5 text-left">
+                
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">FRAME DESIGN & COLOR</label>
+                    <div class="grid grid-cols-4 gap-1 sm:gap-1.5 text-[11px] font-bold">
+                        <button onclick="setStudioFrame('solid', '#ffffff', this)" class="studio-frame-btn p-1.5 rounded-xl bg-white border border-gray-300 text-gray-800 shadow-sm ring-2 ring-purple-600 min-h-[34px]">White</button>
+                        <button onclick="setStudioFrame('solid', '#111827', this)" class="studio-frame-btn p-1.5 rounded-xl bg-gray-900 text-white shadow-sm min-h-[34px]">Black</button>
+                        <button onclick="setStudioFrame('solid', '#fbcfe8', this)" class="studio-frame-btn p-1.5 rounded-xl bg-pink-200 text-gray-900 shadow-sm min-h-[34px]">Pink</button>
+                        <button onclick="setStudioFrame('solid', '#fef08a', this)" class="studio-frame-btn p-1.5 rounded-xl bg-yellow-200 text-gray-900 shadow-sm min-h-[34px]">Yellow</button>
+                        <button onclick="setStudioFrame('solid', '#e9d5ff', this)" class="studio-frame-btn p-1.5 rounded-xl bg-purple-200 text-purple-950 shadow-sm min-h-[34px]">Purple</button>
+                        <button onclick="setStudioFrame('solid', '#a7f3d0', this)" class="studio-frame-btn p-1.5 rounded-xl bg-emerald-200 text-emerald-950 shadow-sm min-h-[34px]">Mint</button>
+                        <button onclick="setStudioFrame('solid', '#bae6fd', this)" class="studio-frame-btn p-1.5 rounded-xl bg-sky-200 text-sky-950 shadow-sm min-h-[34px]">Blue</button>
+                        <button onclick="setStudioFrame('solid', '#fed7aa', this)" class="studio-frame-btn p-1.5 rounded-xl bg-orange-200 text-orange-950 shadow-sm min-h-[34px]">Orange</button>
+                        <button onclick="setStudioFrame('pattern', 'pattern-checkered', this)" class="studio-frame-btn p-1.5 rounded-xl pattern-checkered text-gray-800 border border-pink-300 shadow-sm min-h-[34px]">Check</button>
+                        <button onclick="setStudioFrame('pattern', 'pattern-hearts', this)" class="studio-frame-btn p-1.5 rounded-xl pattern-hearts text-pink-800 border border-pink-300 shadow-sm min-h-[34px]">Hearts</button>
+                        <button onclick="setStudioFrame('pattern', 'pattern-stars', this)" class="studio-frame-btn p-1.5 rounded-xl pattern-stars text-amber-400 border border-amber-500 shadow-sm min-h-[34px]">Stars</button>
+                        <button onclick="setStudioFrame('pattern', 'pattern-gradient', this)" class="studio-frame-btn p-1.5 rounded-xl pattern-gradient text-white shadow-sm min-h-[34px]">Grad</button>
+                    </div>
+                </div>
+
+                <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800">
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Aesthetic Filter ✨</label>
+                    <div class="grid grid-cols-2 gap-1 text-[10px] sm:text-[11px] font-bold">
+                        <button onclick="setCameraFilter('booth', this)" class="cam-filter-btn p-1.5 rounded-xl bg-purple-600 text-white text-left truncate min-h-[32px]">Flash 📸</button>
+                        <button onclick="setCameraFilter('retro', this)" class="cam-filter-btn p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-left truncate min-h-[32px]">Retro 90s 📺</button>
+                        <button onclick="setCameraFilter('sepia', this)" class="cam-filter-btn p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-left truncate min-h-[32px]">Sepia 🎞</button>
+                        <button onclick="setCameraFilter('cyberpunk', this)" class="cam-filter-btn p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-left truncate min-h-[32px]">Cyberpunk 🌆</button>
+                        <button onclick="setCameraFilter('glow', this)" class="cam-filter-btn p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-left truncate min-h-[32px]">Glow ✨</button>
+                        <button onclick="setCameraFilter('bw', this)" class="cam-filter-btn p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-left truncate min-h-[32px]">B&W Noir 🖤</button>
+                    </div>
+                </div>
+
+                <div class="pt-1.5 border-t border-gray-100 dark:border-gray-800">
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Timer Delay</label>
+                    <div class="flex gap-1.5 text-[10px] sm:text-[11px] font-bold">
+                        <button onclick="setTimerSeconds(3, this)" class="timer-opt-btn flex-1 p-1.5 rounded-xl bg-purple-600 text-white min-h-[32px]">3s</button>
+                        <button onclick="setTimerSeconds(5, this)" class="timer-opt-btn flex-1 p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 min-h-[32px]">5s</button>
+                        <button onclick="setTimerSeconds(10, this)" class="timer-opt-btn flex-1 p-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 min-h-[32px]">10s</button>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
 
-        <button onclick="startCaptureSequence()" class="w-full sm:w-auto px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-600/30 hover:scale-105 transition-all inline-flex items-center justify-center gap-3 cursor-pointer mx-auto">
-            <i data-lucide="camera" class="w-5 h-5"></i>
-            <span>START CAPTURE</span>
-        </button>
     </div>
 
-    <!-- VIEW 5: REVIEW & CUSTOMIZE SESSION -->
-    <div id="view-review" class="app-view flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full hidden flex-col items-center justify-start gap-6 sm:gap-8 z-10">
+    <div id="view-review" class="app-view flex-1 max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 w-full hidden flex-col items-center justify-start gap-4 sm:gap-6 z-10">
         
         <div class="text-center">
             <h2 class="text-2xl sm:text-3xl font-extrabold">Review & Customize</h2>
-            <p class="text-[11px] sm:text-xs font-bold text-purple-600 dark:text-purple-400 mt-1">✨ Click 4 or more different stickers below, then download your pictures and framed video separately!</p>
+            <p class="text-[11px] sm:text-xs font-bold text-purple-600 dark:text-purple-400 mt-1">✨ Click stickers to add to corners!</p>
         </div>
 
-        <div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6 sm:gap-8">
+        <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start justify-center">
             
-            <!-- LEFT SIDEBAR -->
-            <div class="w-full lg:w-[350px] bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col gap-4">
+            <div class="lg:col-span-3 bg-white dark:bg-gray-900 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col gap-3.5 text-left h-full justify-between">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Frame Design & Color</label>
-                    <div class="grid grid-cols-4 gap-2">
-                        <button onclick="setFrameStyle('solid', '#ffffff', this)" class="p-2 rounded-xl bg-white border border-gray-300 text-xs font-bold text-gray-800 shadow-sm hover:scale-105 transition-transform">White</button>
-                        <button onclick="setFrameStyle('solid', '#111827', this)" class="p-2 rounded-xl bg-gray-900 text-white text-xs font-bold shadow-sm hover:scale-105 transition-transform">Black</button>
-                        <button onclick="setFrameStyle('solid', '#fbcfe8', this)" class="p-2 rounded-xl bg-pink-200 text-gray-900 text-xs font-bold shadow-sm hover:scale-105 transition-transform">Pink</button>
-                        <button onclick="setFrameStyle('solid', '#fef08a', this)" class="p-2 rounded-xl bg-yellow-200 text-gray-900 text-xs font-bold shadow-sm hover:scale-105 transition-transform">Yellow</button>
-                        <button onclick="setFrameStyle('pattern', 'pattern-checkered', this)" class="p-2 rounded-xl pattern-checkered text-xs font-bold text-gray-800 border border-pink-300 shadow-sm hover:scale-105 transition-transform">Check</button>
-                        <button onclick="setFrameStyle('pattern', 'pattern-hearts', this)" class="p-2 rounded-xl pattern-hearts text-xs font-bold text-pink-800 border border-pink-300 shadow-sm hover:scale-105 transition-transform">Hearts</button>
-                        <button onclick="setFrameStyle('pattern', 'pattern-gradient', this)" class="p-2 rounded-xl pattern-gradient text-xs font-bold text-white border border-blue-300 shadow-sm hover:scale-105 transition-transform col-span-2">Gradient</button>
+                    <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">FRAME DESIGN & COLOR</label>
+                    <div class="grid grid-cols-4 gap-1.5 text-xs font-bold">
+                        <button onclick="setFrameStyle('solid', '#ffffff', this)" class="p-2 rounded-xl bg-white border border-gray-300 text-gray-800 shadow-sm min-h-[38px]">White</button>
+                        <button onclick="setFrameStyle('solid', '#111827', this)" class="p-2 rounded-xl bg-gray-900 text-white shadow-sm min-h-[38px]">Black</button>
+                        <button onclick="setFrameStyle('solid', '#fbcfe8', this)" class="p-2 rounded-xl bg-pink-200 text-gray-900 shadow-sm min-h-[38px]">Pink</button>
+                        <button onclick="setFrameStyle('solid', '#fef08a', this)" class="p-2 rounded-xl bg-yellow-200 text-gray-900 shadow-sm min-h-[38px]">Yellow</button>
+                        <button onclick="setFrameStyle('solid', '#e9d5ff', this)" class="p-2 rounded-xl bg-purple-200 text-purple-950 shadow-sm min-h-[38px]">Purple</button>
+                        <button onclick="setFrameStyle('solid', '#a7f3d0', this)" class="p-2 rounded-xl bg-emerald-200 text-emerald-950 shadow-sm min-h-[38px]">Mint</button>
+                        <button onclick="setFrameStyle('solid', '#bae6fd', this)" class="p-2 rounded-xl bg-sky-200 text-sky-950 shadow-sm min-h-[38px]">Blue</button>
+                        <button onclick="setFrameStyle('solid', '#fed7aa', this)" class="p-2 rounded-xl bg-orange-200 text-orange-950 shadow-sm min-h-[38px]">Orange</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-checkered', this)" class="p-2 rounded-xl pattern-checkered text-gray-800 border border-pink-300 shadow-sm min-h-[38px]">Check</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-hearts', this)" class="p-2 rounded-xl pattern-hearts text-pink-800 border border-pink-300 shadow-sm min-h-[38px]">Hearts</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-stars', this)" class="p-2 rounded-xl pattern-stars text-amber-400 border border-amber-500 shadow-sm min-h-[38px]">Stars</button>
+                        <button onclick="setFrameStyle('pattern', 'pattern-gradient', this)" class="p-2 rounded-xl pattern-gradient text-white shadow-sm min-h-[38px]">Grad</button>
                     </div>
                 </div>
 
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">Sticker Stamp (Minimum 4)</label>
-                        <button onclick="clearStickers()" class="text-xs text-pink-600 hover:underline font-bold cursor-pointer">Clear All</button>
+                <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">4-Corner Sticker Stamp</label>
+                        <button onclick="clearStickers()" class="text-[10px] text-pink-600 hover:underline font-bold cursor-pointer">Clear All</button>
                     </div>
-                    <div class="grid grid-cols-4 gap-2 text-xl">
-                        <button onclick="addSticker('🐼')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🐼</button>
-                        <button onclick="addSticker('💖')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">💖</button>
-                        <button onclick="addSticker('✨')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">✨</button>
-                        <button onclick="addSticker('🌷')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🌷</button>
-                        <button onclick="addSticker('⭐')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">⭐</button>
-                        <button onclick="addSticker('🍒')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🍒</button>
-                        <button onclick="addSticker('🦋')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🦋</button>
-                        <button onclick="addSticker('🎀')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:scale-110 transition-transform cursor-pointer">🎀</button>
+                    <div class="grid grid-cols-4 gap-1.5 text-2xl">
+                        <button onclick="addSticker('🐼')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">🐼</button>
+                        <button onclick="addSticker('💖')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">💖</button>
+                        <button onclick="addSticker('✨')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">✨</button>
+                        <button onclick="addSticker('🌷')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">🌷</button>
+                        <button onclick="addSticker('⭐')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">⭐</button>
+                        <button onclick="addSticker('🍒')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">🍒</button>
+                        <button onclick="addSticker('🦋')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">🦋</button>
+                        <button onclick="addSticker('🎀')" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-sm min-h-[44px]">🎀</button>
                     </div>
                 </div>
             </div>
 
-            <!-- CENTER: PREVIEW -->
-            <div class="flex flex-col items-center justify-center w-full lg:w-auto">
-                <div id="strip-preview-box" class="p-6 sm:p-8 rounded-3xl bg-white shadow-2xl w-full max-w-[360px] sm:w-[440px] text-center relative transition-all border-4 border-purple-200">
-                    <div id="active-stickers-container" class="absolute inset-4 pointer-events-none flex flex-wrap justify-between items-center content-between text-4xl z-20 overflow-hidden"></div>
+            <div class="lg:col-span-6 flex flex-col items-center justify-center w-full">
+                <div id="strip-preview-box" class="p-4 sm:p-8 rounded-3xl bg-white shadow-2xl w-full max-w-[560px] sm:w-[580px] text-center relative transition-all border-4 border-purple-300 mx-auto">
+                    <div id="active-stickers-container" class="absolute inset-4 pointer-events-none z-20 overflow-hidden"></div>
                     
-                    <div id="review-images-wrapper" class="flex flex-col gap-4 mb-4 p-3.5 rounded-2xl bg-black/5 max-h-[480px] sm:max-h-[580px] overflow-y-auto scrollable"></div>
-                    <p id="preview-brand-text" class="font-extrabold text-base text-purple-600 uppercase tracking-widest mt-4">PANDA PHOTOBOOTH</p>
+                    <div id="review-images-wrapper" class="flex flex-col gap-3.5 mb-3.5 p-2 sm:p-3 rounded-2xl bg-black/5 max-h-[500px] sm:max-h-[680px] overflow-y-auto scrollable"></div>
+                    <p id="preview-brand-text" class="font-bold text-sm sm:text-lg text-purple-600 mt-2 tracking-widest lowercase" style="font-family: 'Space Mono', 'Courier New', monospace;">panda photobooth</p>
                 </div>
             </div>
 
-            <!-- RIGHT SIDEBAR -->
-            <div class="w-full lg:w-[350px] bg-white dark:bg-gray-900 p-4 sm:p-5 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col gap-4">
+            <div class="lg:col-span-3 bg-white dark:bg-gray-900 p-4 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl flex flex-col gap-3.5 text-left h-full justify-between">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Aesthetic Filter</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="applyFilter('normal', this)" class="filter-btn-opt p-2.5 rounded-xl bg-purple-600 text-white text-xs font-extrabold cursor-pointer shadow-md">Normal</button>
-                        <button onclick="applyFilter('vintage', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200">Vintage 🎞️</button>
-                        <button onclick="applyFilter('retro', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200">Retro 📸</button>
-                        <button onclick="applyFilter('bw', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200">B&W 🖤</button>
-                        <button onclick="applyFilter('glow', this)" class="filter-btn-opt p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-extrabold cursor-pointer hover:bg-gray-200 col-span-2">Glow ✨</button>
+                    <label class="block text-[10px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Aesthetic Filter</label>
+                    <div class="grid grid-cols-2 gap-1.5 text-xs font-extrabold max-h-48 overflow-y-auto scrollable pr-0.5">
+                        <button onclick="applyFilter('booth', this)" class="filter-btn-opt p-2 rounded-xl bg-purple-600 text-white shadow-md min-h-[38px]">Flash 📸</button>
+                        <button onclick="applyFilter('retro', this)" class="filter-btn-opt p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 min-h-[38px]">Retro 90s 📺</button>
+                        <button onclick="applyFilter('sepia', this)" class="filter-btn-opt p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 min-h-[38px]">Sepia 🎞️</button>
+                        <button onclick="applyFilter('cyberpunk', this)" class="filter-btn-opt p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 min-h-[38px]">Cyberpunk 🌆</button>
+                        <button onclick="applyFilter('glow', this)" class="filter-btn-opt p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 min-h-[38px]">Soft Glow ✨</button>
+                        <button onclick="applyFilter('bw', this)" class="filter-btn-opt p-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 min-h-[38px]">B&W Noir 🖤</button>
                     </div>
                 </div>
 
-                <div class="mt-2 flex flex-col gap-3">
-                    <!-- Button para sa Picture -->
-                    <button onclick="exportProjectOnly()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm shadow-xl shadow-purple-600/30 hover:scale-105 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                <div class="pt-2 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-2.5">
+                    <button onclick="exportProjectOnly()" class="w-full min-h-[48px] py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-sm shadow-xl shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
                         <i data-lucide="download" class="w-4 h-4"></i>
                         <span>Download Picture 💾</span>
                     </button>
 
-                    <!-- Button para sa Framed & Filtered Video -->
-                    <button onclick="downloadVideoDirectly()" class="w-full py-3.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <button onclick="downloadVideoDirectly()" class="w-full min-h-[48px] py-3.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer">
                         <i data-lucide="video" class="w-4 h-4"></i>
-                        <span>Download Framed Video 🎥</span>
+                        <span>Download Video 🎥</span>
                     </button>
 
-                    <button onclick="switchView('view-layout')" class="w-full py-2.5 rounded-2xl bg-gray-100 dark:bg-gray-800 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                    <button onclick="switchView('view-layout')" class="w-full min-h-[40px] py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                         New Session 🔄
                     </button>
                 </div>
@@ -388,7 +479,7 @@
             const targetView = document.getElementById(viewId);
             if(targetView) {
                 targetView.classList.remove('hidden');
-                gsap.fromTo(targetView, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' });
+                gsap.fromTo(targetView, { opacity: 0, y: 15 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' });
             }
 
             if(viewId === 'view-camera') {
@@ -431,7 +522,7 @@
         let mediaRecorder = null;
         let recordedVideoChunks = [];
         let lastRecordedVideoBase64 = null;
-        let liveCameraFilter = 'normal';
+        let liveCameraFilter = 'booth';
         let cameraAnimFrame = null;
         
         let studioFrameType = 'solid';
@@ -440,21 +531,79 @@
         let currentFrameValue = '#ffffff';
         let activeStickersList = [];
 
+        let targetFaceMode = 'all'; 
+        let facePropsMap = { 0: null, 1: null, 2: null, 3: null };
+
+        function setTargetFace(target, btnElem) {
+            targetFaceMode = target;
+            document.querySelectorAll('.target-face-btn').forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white');
+                b.classList.add('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+            });
+            if(btnElem) {
+                btnElem.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+                btnElem.classList.add('bg-purple-600', 'text-white');
+            }
+        }
+
+        function applyPropToTarget(propKey) {
+            if(targetFaceMode === 'all') {
+                facePropsMap[0] = propKey;
+                facePropsMap[1] = propKey;
+                facePropsMap[2] = propKey;
+                facePropsMap[3] = propKey;
+            } else {
+                facePropsMap[targetFaceMode] = propKey;
+            }
+        }
+
+        function clearAllFaceProps() {
+            facePropsMap = { 0: null, 1: null, 2: null, 3: null };
+        }
+
+        function updateDynamicFaceTabs(faceCount) {
+            const tabsContainer = document.getElementById('face-target-tabs');
+            if(!tabsContainer) return;
+
+            let html = `<button onclick="setTargetFace('all', this)" class="target-face-btn px-3 py-1.5 rounded-xl ${targetFaceMode === 'all' ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'} text-xs font-bold shadow-sm cursor-pointer whitespace-nowrap min-h-[36px]">✨ All</button>`;
+            
+            const countToRender = Math.max(1, faceCount);
+            for(let i = 0; i < countToRender; i++) {
+                const isSelected = targetFaceMode === i;
+                html += `<button onclick="setTargetFace(${i}, this)" class="target-face-btn px-3 py-1.5 rounded-xl ${isSelected ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'} text-xs font-bold shadow-sm cursor-pointer whitespace-nowrap min-h-[36px]">👤 Person ${i + 1}</button>`;
+            }
+            
+            tabsContainer.innerHTML = html;
+        }
+
+        function setTimerSeconds(sec, btn) {
+            selectedTimerSeconds = sec;
+            document.querySelectorAll('.timer-opt-btn').forEach(b => {
+                b.classList.remove('bg-purple-600', 'text-white');
+                b.classList.add('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+            });
+            if(btn) {
+                btn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+                btn.classList.add('bg-purple-600', 'text-white');
+            }
+        }
+
         function setCameraFilter(filterName, btn) {
             liveCameraFilter = filterName;
             document.querySelectorAll('.cam-filter-btn').forEach(b => {
                 b.classList.remove('bg-purple-600', 'text-white');
                 b.classList.add('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
             });
-            btn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
-            btn.classList.add('bg-purple-600', 'text-white');
+            if(btn) {
+                btn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300');
+                btn.classList.add('bg-purple-600', 'text-white');
+            }
         }
 
         function setStudioFrame(type, val, btn) {
             studioFrameType = type;
             studioFrameVal = val;
             const container = document.getElementById('camera-frame-container');
-            container.className = "relative w-full max-w-lg sm:max-w-xl h-[320px] sm:h-[420px] rounded-3xl overflow-hidden shadow-2xl border-4 border-purple-200 mb-5 flex items-center justify-center mx-auto p-4 transition-all ";
             
             if(type === 'solid') {
                 container.style.backgroundColor = val;
@@ -476,10 +625,21 @@
             switchView('view-camera');
         }
 
+        let allFaceLandmarks = [];
+        let faceMeshInstance = null;
+
         async function startCamera() {
             try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
                 const video = document.getElementById('booth-video');
+                
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "user", 
+                        width: { ideal: 1280 }, 
+                        height: { ideal: 720 } 
+                    }, 
+                    audio: false 
+                });
                 video.srcObject = mediaStream;
                 await video.play();
 
@@ -488,43 +648,195 @@
                 recordedVideoChunks = [];
                 lastRecordedVideoBase64 = null;
 
-                const recordCanvas = document.createElement('canvas');
-                recordCanvas.width = 640; recordCanvas.height = 760; // Mas mataas para magkasya ang frame at watermark
-                const recCtx = recordCanvas.getContext('2d');
-
                 const liveCanvas = document.getElementById('live-camera-canvas');
                 const liveCtx = liveCanvas.getContext('2d');
 
-                function renderLiveFrame() {
+                const recordCanvas = document.createElement('canvas');
+                const recCtx = recordCanvas.getContext('2d');
+
+                if(typeof FaceMesh !== 'undefined' && !faceMeshInstance) {
+                    try {
+                        faceMeshInstance = new FaceMesh({
+                            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+                        });
+                        faceMeshInstance.setOptions({
+                            maxNumFaces: 4, 
+                            refineLandmarks: true,
+                            minDetectionConfidence: 0.5,
+                            minTrackingConfidence: 0.5
+                        });
+                        faceMeshInstance.onResults((results) => {
+                            if(results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                                allFaceLandmarks = results.multiFaceLandmarks;
+                                updateDynamicFaceTabs(allFaceLandmarks.length);
+                            } else {
+                                allFaceLandmarks = [];
+                                updateDynamicFaceTabs(1);
+                            }
+                        });
+                    } catch(err) {
+                        console.warn("FaceMesh init deferred:", err);
+                    }
+                }
+
+                async function renderLiveFrame() {
                     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        liveCanvas.width = 600; liveCanvas.height = 450;
-                        
-                        // 1. I-draw ang napiling frame background sa buong recording canvas
-                        if(studioFrameType === 'solid') {
-                            recCtx.fillStyle = studioFrameVal;
-                            recCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
-                        } else {
-                            recCtx.fillStyle = '#ffd1dc';
-                            recCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+                        const vWidth = video.videoWidth || 640;
+                        const vHeight = video.videoHeight || 480;
+
+                        // Dynamically adjust canvas dimensions to match stream aspect ratio
+                        recordCanvas.width = vWidth;
+                        recordCanvas.height = vHeight;
+                        liveCanvas.width = vWidth;
+                        liveCanvas.height = vHeight;
+
+                        const destW = vWidth;
+                        const destH = vHeight;
+
+                        if(faceMeshInstance) {
+                            try { await faceMeshInstance.send({ image: video }); } catch(e){}
                         }
 
-                        // 2. I-draw ang camera video sa gitna na may tamang mirror effect
+                        // Mirroring for natural front-facing camera preview
                         recCtx.save();
-                        recCtx.translate(recordCanvas.width, 0);
+                        recCtx.translate(destW, 0);
                         recCtx.scale(-1, 1);
-                        recCtx.drawImage(video, 40, 40, 560, 420);
+                        recCtx.drawImage(video, 0, 0, destW, destH);
                         recCtx.restore();
 
-                        // 3. I-apply ang aesthetic filter sa recorded stream
+                        if(allFaceLandmarks && allFaceLandmarks.length > 0) {
+                            allFaceLandmarks.forEach((faceLandmarks, faceIdx) => {
+                                const propKey = facePropsMap[faceIdx];
+                                if(!propKey) return;
+
+                                const leftEye = faceLandmarks[468] || faceLandmarks[33];
+                                const rightEye = faceLandmarks[473] || faceLandmarks[263];
+
+                                if(!leftEye || !rightEye) return;
+
+                                const rawLx = leftEye.x * destW;
+                                const rawLy = leftEye.y * destH;
+                                const rawRx = rightEye.x * destW;
+                                const rawRy = rightEye.y * destH;
+
+                                const rawAngle = Math.atan2(rawRy - rawLy, rawRx - rawLx);
+                                const eyeDistance = Math.hypot(rawRx - rawLx, rawRy - rawLy);
+
+                                // Exact center between pupils corrected for CSS canvas mirroring
+                                const mirroredCenterX = destW - ((rawLx + rawRx) / 2);
+                                const eyeCenterY = (rawLy + rawRy) / 2;
+                                const correctRotationAngle = -rawAngle;
+
+                                recCtx.save();
+                                recCtx.translate(mirroredCenterX, eyeCenterY);
+                                recCtx.rotate(correctRotationAngle);
+
+                                const w = eyeDistance * 2.85;
+                                const h = w * 0.45;
+
+                                recCtx.globalAlpha = 0.88;
+
+                                if(propKey === 'heart_glasses') {
+                                    recCtx.lineWidth = Math.max(3, w * 0.04);
+                                    recCtx.strokeStyle = 'rgba(219, 39, 119, 0.95)';
+                                    recCtx.fillStyle = 'rgba(244, 114, 182, 0.35)';
+
+                                    const heartSize = w * 0.28;
+                                    drawHeart(recCtx, -w * 0.25, 0, heartSize);
+                                    drawHeart(recCtx, w * 0.25, 0, heartSize);
+
+                                    recCtx.beginPath();
+                                    recCtx.moveTo(-w * 0.08, 0);
+                                    recCtx.lineTo(w * 0.08, 0);
+                                    recCtx.stroke();
+
+                                } else if(propKey === 'round_retro') {
+                                    recCtx.lineWidth = Math.max(3, w * 0.07);
+                                    recCtx.strokeStyle = 'rgba(17, 24, 39, 0.9)';
+                                    recCtx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+
+                                    recCtx.beginPath();
+                                    recCtx.arc(-w*0.25, 0, w*0.24, 0, Math.PI * 2);
+                                    recCtx.arc(w*0.25, 0, w*0.24, 0, Math.PI * 2);
+                                    recCtx.fill();
+                                    recCtx.stroke();
+
+                                    recCtx.beginPath();
+                                    recCtx.arc(0, -h*0.05, w*0.06, Math.PI, 0);
+                                    recCtx.stroke();
+
+                                } else if(propKey === 'masquerade_mask') {
+                                    recCtx.fillStyle = 'rgba(30, 64, 175, 0.65)';
+                                    recCtx.strokeStyle = 'rgba(96, 165, 250, 0.85)';
+                                    recCtx.lineWidth = 3.5;
+
+                                    recCtx.beginPath();
+                                    recCtx.moveTo(-w*0.55, -h*0.2);
+                                    recCtx.quadraticCurveTo(0, -h*0.9, w*0.55, -h*0.2);
+                                    recCtx.quadraticCurveTo(w*0.6, h*0.6, w*0.3, h*0.7);
+                                    recCtx.quadraticCurveTo(0, h*0.2, -w*0.3, h*0.7);
+                                    recCtx.quadraticCurveTo(-w*0.6, h*0.6, -w*0.55, -h*0.2);
+                                    recCtx.closePath();
+                                    recCtx.fill();
+                                    recCtx.stroke();
+
+                                    recCtx.globalCompositeOperation = 'destination-out';
+                                    recCtx.beginPath();
+                                    recCtx.ellipse(-w*0.25, 0, w*0.17, h*0.35, Math.PI/12, 0, Math.PI*2);
+                                    recCtx.ellipse(w*0.25, 0, w*0.17, h*0.35, -Math.PI/12, 0, Math.PI*2);
+                                    recCtx.fill();
+                                    recCtx.globalCompositeOperation = 'source-over';
+
+                                } else if(propKey === 'cateye_red') {
+                                    recCtx.fillStyle = 'rgba(220, 38, 38, 0.65)';
+                                    recCtx.strokeStyle = 'rgba(248, 113, 113, 0.85)';
+                                    recCtx.lineWidth = 3.5;
+
+                                    recCtx.beginPath();
+                                    recCtx.moveTo(-w*0.6, -h*0.6);
+                                    recCtx.lineTo(-w*0.08, -h*0.2);
+                                    recCtx.lineTo(w*0.08, -h*0.2);
+                                    recCtx.lineTo(w*0.6, -h*0.6);
+                                    recCtx.quadraticCurveTo(w*0.45, h*0.8, w*0.1, h*0.5);
+                                    recCtx.lineTo(-w*0.1, h*0.5);
+                                    recCtx.quadraticCurveTo(-w*0.45, h*0.8, -w*0.6, -h*0.6);
+                                    recCtx.closePath();
+                                    recCtx.fill();
+                                    recCtx.stroke();
+
+                                    recCtx.globalCompositeOperation = 'destination-out';
+                                    recCtx.beginPath();
+                                    recCtx.ellipse(-w*0.25, -h*0.05, w*0.18, h*0.34, Math.PI/10, 0, Math.PI*2);
+                                    recCtx.ellipse(w*0.25, -h*0.05, w*0.18, h*0.34, -Math.PI/10, 0, Math.PI*2);
+                                    recCtx.fill();
+                                    recCtx.globalCompositeOperation = 'source-over';
+
+                                } else if(propKey === 'star_glasses') {
+                                    recCtx.lineWidth = 4;
+                                    recCtx.strokeStyle = 'rgba(245, 158, 11, 0.85)';
+                                    recCtx.fillStyle = 'rgba(253, 224, 71, 0.3)';
+
+                                    drawStar(recCtx, -w*0.25, 0, 5, w*0.28, w*0.14);
+                                    drawStar(recCtx, w*0.25, 0, 5, w*0.28, w*0.14);
+                                    
+                                    recCtx.beginPath();
+                                    recCtx.moveTo(-w*0.06, 0);
+                                    recCtx.lineTo(w*0.06, 0);
+                                    recCtx.stroke();
+
+                                } else if(propKey === 'pixel_thug') {
+                                    recCtx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                                    recCtx.fillRect(-w*0.55, -h*0.3, w*1.1, h*0.6);
+                                    recCtx.fillStyle = '#ffffff';
+                                    recCtx.fillRect(-w*0.42, -h*0.15, w*0.14, h*0.15);
+                                    recCtx.fillRect(w*0.15, -h*0.15, w*0.14, h*0.15);
+                                }
+
+                                recCtx.restore();
+                            });
+                        }
+
                         applyFilterEffect(recCtx, recordCanvas.width, recordCanvas.height, liveCameraFilter);
-
-                        // 4. I-draw ang brand watermark sa baba ng framed video
-                        recCtx.fillStyle = studioFrameVal === '#111827' ? '#c084fc' : '#7c3aed';
-                        recCtx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
-                        recCtx.textAlign = 'center';
-                        recCtx.fillText('PANDA PHOTOBOOTH 🐼🌷', recordCanvas.width / 2, 715);
-
-                        // 5. I-display sa live preview canvas
                         liveCtx.drawImage(recordCanvas, 0, 0, liveCanvas.width, liveCanvas.height);
                     }
                     cameraAnimFrame = requestAnimationFrame(renderLiveFrame);
@@ -554,9 +866,49 @@
                 };
 
             } catch(e) {
-                alert("Camera access failed. Please check permissions.");
+                alert("Hindi ma-access ang camera. Pakicheck ang camera permissions ng browser mo.");
                 switchView('view-layout');
             }
+        }
+
+        function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function drawHeart(ctx, x, y, size) {
+            ctx.save();
+            ctx.translate(x, y - size * 0.55);
+            ctx.beginPath();
+            ctx.moveTo(0, size * 0.3);
+            ctx.bezierCurveTo(0, 0, -size * 0.8, 0, -size * 0.8, size * 0.4);
+            ctx.bezierCurveTo(-size * 0.8, size * 0.7, 0, size * 1.0, 0, size * 1.15);
+            ctx.bezierCurveTo(0, size * 1.0, size * 0.8, size * 0.7, size * 0.8, size * 0.4);
+            ctx.bezierCurveTo(size * 0.8, 0, 0, 0, 0, size * 0.3);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
         }
 
         function stopCamera() {
@@ -568,6 +920,13 @@
                 mediaStream.getTracks().forEach(t => t.stop());
                 mediaStream = null;
             }
+        }
+
+        function triggerFlashEffect() {
+            const flashEl = document.getElementById('flash-effect');
+            flashEl.classList.remove('trigger-flash');
+            void flashEl.offsetWidth; 
+            flashEl.classList.add('trigger-flash');
         }
 
         function startCaptureSequence() {
@@ -592,6 +951,8 @@
                 } else {
                     clearInterval(timer);
                     overlay.classList.add('hidden');
+                    
+                    triggerFlashEffect();
                     takeSnapshot();
 
                     if(currentShotCount < totalShotsNeeded) {
@@ -611,26 +972,13 @@
         }
 
         function takeSnapshot() {
-            const video = document.getElementById('booth-video');
+            const liveCanvas = document.getElementById('live-camera-canvas');
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = 640; tempCanvas.height = 480;
+            tempCanvas.width = liveCanvas.width; 
+            tempCanvas.height = liveCanvas.height;
             const tCtx = tempCanvas.getContext('2d');
 
-            if(studioFrameType === 'solid') {
-                tCtx.fillStyle = studioFrameVal;
-                tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            } else {
-                tCtx.fillStyle = '#ffd1dc';
-                tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            }
-
-            tCtx.save();
-            tCtx.translate(tempCanvas.width, 0);
-            tCtx.scale(-1, 1);
-            tCtx.drawImage(video, 20, 20, 600, 400);
-            tCtx.restore();
-
-            applyFilterEffect(tCtx, tempCanvas.width, tempCanvas.height, liveCameraFilter);
+            tCtx.drawImage(liveCanvas, 0, 0);
 
             rawCapturedImages.push(tempCanvas.toDataURL('image/png'));
             currentShotCount++;
@@ -644,21 +992,29 @@
             for (let i = 0; i < d.length; i += 4) {
                 let r = d[i], g = d[i+1], b = d[i+2];
 
-                if (type === 'bw') {
+                if (type === 'booth') {
+                    d[i]   = Math.min(255, r * 1.15 + 20);
+                    d[i+1] = Math.min(255, g * 1.10 + 15);
+                    d[i+2] = Math.min(255, b * 1.22 + 25);
+                } else if (type === 'retro') {
+                    d[i]   = Math.min(255, r * 1.25 + 25);
+                    d[i+1] = Math.min(255, g * 1.05 + 10);
+                    d[i+2] = Math.min(255, b * 0.75);
+                } else if (type === 'sepia') {
+                    d[i]   = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
+                    d[i+1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
+                    d[i+2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+                } else if (type === 'cyberpunk') {
+                    d[i]   = Math.min(255, r * 1.35 + 25);
+                    d[i+1] = Math.min(255, g * 0.65);
+                    d[i+2] = Math.min(255, b * 1.45 + 35);
+                } else if (type === 'bw') {
                     let v = 0.3 * r + 0.59 * g + 0.11 * b;
                     d[i] = v; d[i+1] = v; d[i+2] = v;
-                } else if (type === 'vintage') {
-                    d[i]   = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189) + 20);
-                    d[i+1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168) + 10);
-                    d[i+2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
-                } else if (type === 'retro') {
-                    d[i]   = Math.min(255, r * 1.2 + 30);
-                    d[i+1] = Math.min(255, g * 1.1 + 10);
-                    d[i+2] = Math.min(255, b * 0.8);
                 } else if (type === 'glow') {
-                    d[i]   = Math.min(255, r * 1.15 + 15);
-                    d[i+1] = Math.min(255, g * 1.15 + 15);
-                    d[i+2] = Math.min(255, b * 1.15 + 15);
+                    d[i]   = Math.min(255, r * 1.20 + 20);
+                    d[i+1] = Math.min(255, g * 1.20 + 20);
+                    d[i+2] = Math.min(255, b * 1.20 + 20);
                 }
             }
             ctx.putImageData(imgData, 0, 0);
@@ -685,7 +1041,7 @@
             const box = document.getElementById('strip-preview-box');
             
             box.style.backgroundColor = '';
-            box.className = "p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-[360px] sm:w-[440px] text-center relative transition-all border-4 border-purple-200";
+            box.className = "p-4 sm:p-8 rounded-3xl shadow-2xl w-full max-w-[560px] sm:w-[580px] text-center relative transition-all border-4 border-purple-300 mx-auto";
 
             if(type === 'solid') {
                 box.style.backgroundColor = val;
@@ -703,6 +1059,9 @@
         }
 
         function addSticker(emoji) {
+            if(activeStickersList.length >= 4) {
+                activeStickersList.shift();
+            }
             activeStickersList.push(emoji);
             renderStickersPreview();
         }
@@ -715,15 +1074,24 @@
         function renderStickersPreview() {
             const container = document.getElementById('active-stickers-container');
             container.innerHTML = '';
+
+            const cornerPositions = [
+                { top: '12px', left: '12px' },     
+                { top: '12px', right: '12px' },    
+                { bottom: '32px', left: '12px' }, 
+                { bottom: '32px', right: '12px' } 
+            ];
+
             activeStickersList.forEach((st, idx) => {
                 const span = document.createElement('span');
                 span.innerText = st;
-                span.className = "absolute cursor-pointer hover:scale-125 transition-transform select-none";
+                span.className = "absolute text-3xl sm:text-4xl cursor-pointer hover:scale-125 transition-transform select-none";
                 
-                const randomTop = Math.random() * 85;
-                const randomLeft = (idx % 2 === 0) ? (Math.random() * 15) : (80 + Math.random() * 15);
-                span.style.top = `${randomTop}%`;
-                span.style.left = `${randomLeft}%`;
+                const pos = cornerPositions[idx % 4];
+                if(pos.top) span.style.top = pos.top;
+                if(pos.bottom) span.style.bottom = pos.bottom;
+                if(pos.left) span.style.left = pos.left;
+                if(pos.right) span.style.right = pos.right;
 
                 span.addEventListener('click', () => {
                     activeStickersList.splice(idx, 1);
@@ -750,7 +1118,7 @@
             loadGalleryItems();
         }
 
-        let activeFilterType = 'normal';
+        let activeFilterType = 'booth';
 
         function buildReviewStrip() {
             const wrapper = document.getElementById('review-images-wrapper');
@@ -758,10 +1126,10 @@
             
             rawCapturedImages.forEach((src, idx) => {
                 const containerDiv = document.createElement('div');
-                containerDiv.className = "relative group";
+                containerDiv.className = "relative group w-full";
 
                 const filteredImg = document.createElement('img');
-                filteredImg.className = "w-full h-36 sm:h-44 object-cover rounded-2xl shadow-sm border border-black/10";
+                filteredImg.className = "w-full h-52 sm:h-80 object-cover rounded-2xl shadow-md border border-black/10 transition-all";
                 
                 const img = new Image();
                 img.onload = () => {
@@ -790,13 +1158,9 @@
         }
 
         function exportProjectOnly() {
-            if (activeStickersList.length < 4) {
-                alert("⚠️ Mangyaring maglagay ng kahit minimum na 4 na stickers bago i-download ang iyong photobooth strip!");
-                return;
-            }
-
             const canvas = document.createElement('canvas');
-            canvas.width = 600; canvas.height = 1050;
+            canvas.width = 1200; 
+            canvas.height = 2100;
             const ctx = canvas.getContext('2d');
             
             if(currentFrameType === 'solid') {
@@ -808,10 +1172,12 @@
             }
 
             let loaded = 0;
+            const singlePhotoHeight = (canvas.height - 180) / rawCapturedImages.length;
+
             rawCapturedImages.forEach((src, idx) => {
                 const img = new Image();
                 img.onload = () => {
-                    let y = 45 + (idx * 230);
+                    let y = 60 + (idx * (singlePhotoHeight + 20));
                     
                     const pCanvas = document.createElement('canvas');
                     const pCtx = pCanvas.getContext('2d');
@@ -820,21 +1186,30 @@
                     pCtx.drawImage(img, 0, 0);
                     applyFilterEffect(pCtx, pCanvas.width, pCanvas.height, activeFilterType);
 
-                    ctx.drawImage(pCanvas, 50, y, 500, 210);
+                    ctx.drawImage(pCanvas, 80, y, 1040, singlePhotoHeight - 20);
                     loaded++;
 
                     if(loaded === rawCapturedImages.length) {
-                        ctx.font = '36px sans-serif';
+                        ctx.font = '72px sans-serif';
+                        ctx.textBaseline = 'top';
+                        
+                        const cornerCoordinates = [
+                            { x: 30, y: 30, align: 'left' },     
+                            { x: 1170, y: 30, align: 'right' },   
+                            { x: 30, y: 1980, align: 'left' },    
+                            { x: 1170, y: 1980, align: 'right' }   
+                        ];
+
                         activeStickersList.forEach((st, sIdx) => {
-                            let sx = (sIdx % 2 === 0) ? 40 + (sIdx * 15) : 500 - (sIdx * 10);
-                            let sy = 60 + (sIdx * 120) % 950;
-                            ctx.fillText(st, sx, sy);
+                            const pos = cornerCoordinates[sIdx % 4];
+                            ctx.textAlign = pos.align;
+                            ctx.fillText(st, pos.x, pos.y);
                         });
 
                         ctx.fillStyle = '#7c3aed';
-                        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+                        ctx.font = '400 36px "Space Mono", "Courier New", monospace';
                         ctx.textAlign = 'center';
-                        ctx.fillText('PANDA PHOTOBOOTH', canvas.width / 2, 1010);
+                        ctx.fillText('panda photobooth', canvas.width / 2, 2020);
 
                         const dataUrl = canvas.toDataURL('image/png');
                         
